@@ -18,29 +18,32 @@ public class Main {
         //read from the db files and store in some structure
         HashMap<String, String> db = readDbFiles(catalog);
 
-
+        //scanner object to prompt for user input and to pass to functions
         Scanner scanner = new Scanner(System.in);
+        //control which option we choose
         int option;
+        //continue prompting user until they hit 5 to exit
         boolean done = false;
         while(!done) {
             printMenu();
             option = scanner.nextInt();
             switch (option) {
                 case 1:
-                    createTable();
+                    createTable(scanner);
                     break;
                 case 2:
-                    insert();
+                    insert(scanner);
                     break;
                 case 3:
-                    remove();
+                    remove(scanner);
                     break;
                 case 4:
-                    printFile();
+                    printFile(scanner);
                     break;
                 case 5:
                     done = true;
-                    purge();
+                    // add shutdown hook so this purge happens always?
+                    purge(catalog, db);
                     break;
                 default:
                     System.out.println("Error! Enter a valid option");
@@ -71,31 +74,31 @@ public class Main {
 
 
     //create a table and store it in the dbfiles
-    public static void createTable() {
+    public static void createTable(Scanner in) {
 
     }
 
 
     //insert into an existing table
-    public static void insert() {
+    public static void insert(Scanner in) {
 
     }
 
 
     //mark db entry for removal
-    public static void remove() {
+    public static void remove(Scanner in) {
 
     }
 
 
     //print contents of dbfile
-    public static void printFile() {
+    public static void printFile(Scanner in) {
 
     }
 
 
     //delete entries from table marked by the remove function
-    public static void purge() {
+    public static void purge(File catalog, HashMap<String, String> db) {
 
     }
 
