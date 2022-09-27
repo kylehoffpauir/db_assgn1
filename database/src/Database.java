@@ -1,16 +1,12 @@
 import sun.font.TrueTypeFont;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Scanner;
+
+import java.io.*;
+import java.util.*;
 
 public class Database {
     private static final String CATALOG = "dbfiles.db";
     private static final String CATALOG_PATH = "dbfiles/";
+    private static final boolean DEBUG = true;
 
     public static void main(String[] args) throws IOException {
         // going to be pulled from dbFiles, mapping Tablesnames to columns and their size
@@ -22,7 +18,7 @@ public class Database {
 
     private static File load(HashMap<String, String[]> db ) {
         //attempt to create the dbFiles if it doesnt already exist
-        File catalog_dir = new File(CATALOG);
+        File catalog_dir = new File(CATALOG_PATH);
         File catalog = null;
         try {
             if (!catalog_dir.exists()) {
@@ -57,9 +53,10 @@ public class Database {
             option = scanner.nextInt();
             scanner.nextLine();
             System.out.println();
+            db = readDbFiles(catalog);
             switch (option) {
                 case 1:
-                    createTable(scanner);
+                    createTable(scanner, db);
                     break;
                 case 2:
                     insert(scanner, db);
@@ -105,14 +102,15 @@ public class Database {
         try {
             Scanner file = new Scanner(catalog);
             while(file.hasNextLine()) {
-                String[] line = file.nextLine().split(" ");
+                String[] line = file.nextLine().split("\t");
+                if(DEBUG) System.out.println(Arrays.toString(line));
                 // get the table name from your dbFile
                 String table = line[0];
-                String[] cols = new String[line.length];
+                String[] cols = new String[line.length - 1];
                 int count = 0;
                 // add your columns and their maximum size to the cols array
-                for (int i = 1; i < line.length - 1; i += 2) {
-                    cols[count] = line[i] + " " + line[i+1];
+                for (int i = 1; i < line.length; i++) {
+                    cols[count] = line[i];
                     count++;
                 }
                 // add your column info to your table -> col map
@@ -128,7 +126,7 @@ public class Database {
 
 
     //create a table and store it in the dbfiles
-    public static void createTable(Scanner in) throws IOException {
+    public static void createTable(Scanner in, HashMap<String, String[]> db) throws IOException {
         //store the column names and lengths in arraylists
         ArrayList<String> colNames = new ArrayList<String>();
         ArrayList<Integer> colLengths = new ArrayList<Integer>();
@@ -193,8 +191,9 @@ public class Database {
             // add column info to catalog for later size checking
             fwCatalog.append(colNames.get(i) + " ");
             fwCatalog.append(colLengths.get(i).toString() + "\t");
-            // add column names to the table
-            fwTable.append(colNames.get(i) + " ");
+            // add column names to the tables
+            //  NEED TO PAD THE SPACES HERE
+            fwTable.append(colNames.get(i) + "\t");
         }
         fwCatalog.append("\n");
         fwTable.append("\n");
@@ -208,38 +207,59 @@ public class Database {
     public static void insert(Scanner in, HashMap<String, String[]> db) throws IOException {
         System.out.print("Enter file name: ");
         String table = in.nextLine();
+        if(!table.contains(".db")) {
+            table+=".db";
+        }
         FileWriter fw = null;
+        if(DEBUG) {
+            System.out.println(db.keySet());
+            for (String x : db.keySet()) {
+                System.out.println(Arrays.toString(db.get(x)));
+            }
+        }
         try {
-            if ((db.get(table) == null))
+            if ((db.get(table) == null)) {
+                System.err.println("Error - could not find table in db hashmap");
                 throw new IOException();
-            fw = new FileWriter(CATALOG_PATH + table + ".db");
+            }
+            fw = new FileWriter(CATALOG_PATH + table, true);
         } catch (IOException e) {
             System.err.println("Error - table does not exist.");
             return;
         }
 
         String[] tableData = db.get(table);
-        ArrayList<String> newEntries = new ArrayList<String>();
+
         //loop while the user wants to input more data
         boolean moreEntries = true;
         while(moreEntries ) {
+            //reset the entries in our list
+            ArrayList<String> newEntries = new ArrayList<String>();
             //go through every col and prompt for input
+            if(DEBUG) System.out.println("tableData = " + Arrays.toString(tableData));
             for (String i : tableData) {
+                if(DEBUG)  System.out.println(i);
                 String[] splitCol = i.split(" ");
                 String colName = splitCol[0];
                 int colSize = Integer.parseInt(splitCol[1]);
-                System.out.print(colName + ": ");
+                System.out.print(colName + " (" + colSize + "): ");
                 String col = in.nextLine();
                 //ensure that user input is of proper size
                 if (col.length() > colSize) {
                     System.err.println("Error - input data exceeds size for column");
                     return;
                 }
+                while(col.length() - 1 != colSize)
+                    col += " ";
                 newEntries.add(col);
                 System.out.println();
             }
             //append new entries to file
+
             for ( String x : newEntries) {
+                if(DEBUG) {
+                    System.out.println("APPENDING: "+ x);
+                }
                 fw.append(x + "\t");
             }
             fw.append("\n");
@@ -264,7 +284,22 @@ public class Database {
 
     //print contents of dbfile
     public static void printFile(Scanner in) {
-
+        System.out.print("Enter file name: ");
+        String table = in.nextLine();
+        BufferedReader br = null;
+        if(!table.contains(".db")) {
+            table+=".db";
+        }
+        try {
+            br = new BufferedReader(new FileReader(CATALOG_PATH + table));
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error - table does not exist.");
+            return;
+        }
     }
 
 
