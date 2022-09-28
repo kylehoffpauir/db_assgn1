@@ -144,25 +144,32 @@ public class Database {
 
         //take in and store column info
         while(keepReading) {
-            System.out.print("Enter column name and it's length: ");
-            String line = in.nextLine();
-            System.out.println();
-            if(line.equals(""))
-                keepReading = false;
-            else {
-                String[] lineSplit = line.split(" ");
-                String name = lineSplit[0];
-                int size = Integer.parseInt(line.split(" ")[1]);
-                // ensure single word colNames
-                if( name.contains(" ")) {
-                    System.err.println("Error! Db columns must be single words");
-                    table.delete();
-                    System.err.println("Table deleted.");
-                    return;
+            try {
+                System.out.print("Enter column name and it's length: ");
+                String line = in.nextLine();
+                System.out.println();
+                if (line.equals(""))
+                    keepReading = false;
+                else {
+                    String[] lineSplit = line.split(" ");
+                    String name = lineSplit[0];
+                    int size = Integer.parseInt(line.split(" ")[1]);
+                    // ensure single word colNames
+                    if (name.contains(" ")) {
+                        System.err.println("Error! Db columns must be single words");
+                        table.delete();
+                        System.err.println("Table deleted.");
+                        return;
+                    }
+                    // add to lists
+                    while (name.length() - 1 != size)
+                        name += " ";
+                    colNames.add(name);
+                    colLengths.add(size);
                 }
-                // add to lists
-                colNames.add(name);
-                colLengths.add(size);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                System.err.println("Must include both column name and length!");
+                return;
             }
 
         }
@@ -173,6 +180,8 @@ public class Database {
             System.out.println("Wrote to disk!");
         } catch(Exception e) {
             System.err.println("Error writing to disk. Table not saved.");
+            if(DEBUG)
+                System.err.println(e.toString());
         }
         return;
     }
@@ -192,7 +201,6 @@ public class Database {
             fwCatalog.append(colNames.get(i) + " ");
             fwCatalog.append(colLengths.get(i).toString() + "\t");
             // add column names to the tables
-            //  NEED TO PAD THE SPACES HERE
             fwTable.append(colNames.get(i) + "\t");
         }
         fwCatalog.append("\n");
@@ -239,7 +247,7 @@ public class Database {
             if(DEBUG) System.out.println("tableData = " + Arrays.toString(tableData));
             for (String i : tableData) {
                 if(DEBUG)  System.out.println(i);
-                String[] splitCol = i.split(" ");
+                String[] splitCol = i.split("\\s+");
                 String colName = splitCol[0];
                 int colSize = Integer.parseInt(splitCol[1]);
                 System.out.print(colName + " (" + colSize + "): ");
@@ -307,7 +315,6 @@ public class Database {
     public static void purge(File catalog, HashMap<String, String[]> db) {
 
     }
-
 
 
 }//end Main class
