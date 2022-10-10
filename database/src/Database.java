@@ -1,12 +1,16 @@
 import sun.font.TrueTypeFont;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Database {
     private static final String CATALOG = "dbfiles.db";
     private static final String CATALOG_PATH = "dbfiles/";
     private static final boolean DEBUG = true;
+    public static ArrayList<String> TO_DELETE = new ArrayList<String>();
 
     public static void main(String[] args) throws IOException {
         // going to be pulled from dbFiles, mapping Tablesnames to columns and their size
@@ -62,7 +66,7 @@ public class Database {
                     insert(scanner, db);
                     break;
                 case 3:
-                    remove(scanner);
+                    remove(scanner, db);
                     break;
                 case 4:
                     printFile(scanner);
@@ -285,8 +289,81 @@ public class Database {
 
 
     //mark db entry for removal
-    public static void remove(Scanner in) {
+    public static void remove(Scanner in, HashMap<String, String[]> db) {
+        System.out.print("Enter file name: ");
+        String table = in.nextLine();
+        if(!table.contains(".db")) {
+            table+=".db";
+        }
+        FileWriter fw = null;
+        if(DEBUG) {
+            System.out.println(db.keySet());
+            for (String x : db.keySet()) {
+                System.out.println(Arrays.toString(db.get(x)));
+            }
+        }
+        try {
+            if ((db.get(table) == null)) {
+                System.err.println("Error - could not find table in db hashmap");
+                throw new IOException();
+            }
+            fw = new FileWriter(CATALOG_PATH + table, true);
+        } catch (IOException e) {
+            System.err.println("Error - table does not exist.");
+            return;
+        }
+        String[] tableData = db.get(table);
+        String tablePath = CATALOG_PATH + table;
+        //which entry?
+        ArrayList<String> entryData = new ArrayList<String>();
+        //go through every col and prompt for input
+        if(DEBUG) System.out.println("tableData = " + Arrays.toString(tableData));
+        for (String i : tableData) {
+            if(DEBUG)  System.out.println(i);
+            String[] splitCol = i.split("\\s+");
+            String colName = splitCol[0];
+            int colSize = Integer.parseInt(splitCol[1]);
+            System.out.print(colName + " (" + colSize + "): ");
+            String col = in.nextLine();
+            //ensure that user input is of proper size
+            if (col.length() > colSize) {
+                System.err.println("Error - input data exceeds size for column");
+                return;
+            }
+            while(col.length() - 1 != colSize)
+                col += " ";
+            entryData.add(col);
+            System.out.println();
+        }
+        try {
+            List<String> newLines = new ArrayList<>();
+            for (String line : Files.readAllLines(Paths.get(tablePath), StandardCharsets.UTF_8)) {
 
+                String[] lineVals = line.split("\\s+");
+                boolean found = true;
+                String entry = "";
+                int i = 0;
+                for (String x : entryData) {
+                    if (!x.trim().equals(lineVals[i])) {
+                        found = false;
+                    }
+                    else
+                        entry += x;
+                    i++;
+                }
+                if (found) {
+                    if (DEBUG) System.out.println("FOUND");
+                    newLines.add("#" + line.substring(1));
+                } else {
+                    newLines.add(line);
+                }
+            }
+            System.out.println(newLines);
+            Files.write(Paths.get(tablePath), newLines, StandardCharsets.UTF_8);
+            TO_DELETE.add(tablePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -313,7 +390,47 @@ public class Database {
 
     //delete entries from table marked by the remove function
     public static void purge(File catalog, HashMap<String, String[]> db) {
-
+        for (String filePath : TO_DELETE) {
+            File inputFile = new File(filePath);
+            File tempFile = new File("tempFile.db");
+            try {
+                BufferedReader fr = new BufferedReader(new FileReader(inputFile));
+                BufferedWriter fw = new BufferedWriter(new FileWriter(tempFile));
+                String line;
+                while ((line = fr.readLine()) != null) {
+                    if (line.indexOf("#") == -1) {
+                        System.out.println(line);
+                        fw.write(line + System.getProperty("line.separator"));
+                    }
+                }
+                fw.close();
+                fr.close();
+                FileInputStream in = new FileInputStream(tempFile);
+                FileOutputStream out = new FileOutputStream(inputFile);
+                //copy contents from temp to actual
+                try {
+                    int n;
+                    while ((n = in.read()) != -1) {
+                        // write() function to write
+                        // the byte of data
+                        out.write(n);
+                    }
+                }
+                finally {
+                    if (in != null) {
+                        in.close();
+                    }
+                    if (out != null) {
+                        out.close();
+                    }
+                }
+                return;
+            } catch (Exception e) {
+                System.err.println("Error deleting data from file");
+                e.printStackTrace();
+                return;
+            }
+        }
     }
 
 
